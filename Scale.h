@@ -26,6 +26,7 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
+/* $XFree86: xc/programs/xmag/Scale.h,v 1.5 2001/12/14 20:02:11 dawes Exp $ */
 
 #ifndef _XawScale_h
 #define _XawScale_h
@@ -101,8 +102,6 @@ from The Open Group.
 #define XtCvisual "Visual"
 #define XtRvisual "Visual"
 
-extern void AWSetImage();
-extern void SWSetImage();
 
 /* Class record constants */
 
@@ -110,6 +109,22 @@ extern WidgetClass scaleWidgetClass;
 
 typedef struct _ScaleClassRec *ScaleWidgetClass;
 typedef struct _ScaleRec      *ScaleWidget;
+
+extern int SWGetImagePixel ( Widget w, Position x, Position y, 
+			     Position *img_x, Position *img_y, 
+			     Pixel *img_pixel );
+extern void SWUnscale ( Widget w, XEvent *event, String *params, 
+			Cardinal *num_params );
+extern void SWAutoscale ( Widget w, XEvent *event, String *params, 
+			  Cardinal *num_params );
+extern void SWInitialSize ( Widget w, XEvent *event, String *params, 
+			    Cardinal *num_params );
+extern void SWSetImage ( Widget w, XImage *image );
+extern void RequestSelection ( Widget w, XEvent *event, String *params, 
+			       Cardinal *num_params );
+extern void GrabSelection ( Widget w, XEvent *event, String *params, 
+			    Cardinal *num_params );
+extern Pixmap SWGetPixmap ( Widget w );
 
 #endif /* _XawScale_h */
 

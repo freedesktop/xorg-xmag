@@ -26,13 +26,14 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
+/* $XFree86: xc/programs/xmag/RootWin.c,v 1.5 2001/12/14 20:02:11 dawes Exp $ */
 
 
 #include <X11/IntrinsicP.h>
 #include <X11/StringDefs.h>
 #include "RootWinP.h"
 
-static void Realize();
+static void Realize ( Widget w, XtValueMask *value_mask, XSetWindowAttributes *attributes );
 
 RootWindowClassRec rootWindowClassRec = {
   { /* core fields */
@@ -77,10 +78,8 @@ RootWindowClassRec rootWindowClassRec = {
 WidgetClass rootWindowWidgetClass = (WidgetClass)&rootWindowClassRec;
 
 /*ARGSUSED*/
-static void Realize(w, value_mask, attributes)
-    Widget	w;
-    XtValueMask *value_mask;
-    XSetWindowAttributes *attributes;
+static void 
+Realize(Widget w, XtValueMask *value_mask, XSetWindowAttributes *attributes)
 {
     w->core.window = RootWindowOfScreen(w->core.screen);
 }

@@ -26,35 +26,40 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
+/* $XFree86: xc/programs/xmag/Scale.c,v 3.9 2001/12/14 20:02:11 dawes Exp $ */
 
 /*
  * Author:  Davor Matic, MIT X Consortium
  */
+
+#include <stdio.h>
+#include <ctype.h>
+#include <math.h>
+#include <stdlib.h>
+#if defined(ISC) && __STDC__ && !defined(ISC30)
+extern double atof(char *);
+#endif
 
 #include <X11/IntrinsicP.h>
 #include <X11/StringDefs.h>
 #include <X11/Xos.h>
 #include <X11/Xaw/XawInit.h>
 
+#include "CutPaste.h"
 #include "ScaleP.h"
-
-#include <stdio.h>
-#include <ctype.h>
-#include <math.h>
 
 #define myrint(x) floor(x + 0.5)
 
-#ifndef X_NOT_STDC_ENV
-#include <stdlib.h>
+#define streq(a,b) (strcmp( (a), (b) ) == 0)
+#ifndef min
+#define min(x, y) ((x) > (y) ? (y) : (x))
 #endif
-
+#ifndef max
+#define max(x, y) ((x) < (y) ? (y) : (x))
+#endif
 #if defined(ISC) && __STDC__ && !defined(ISC30)
 extern double atof(char *);
 #endif
-
-#define streq(a,b) (strcmp( (a), (b) ) == 0)
-#define min(x, y) (x > y ? y : x)
-#define max(x, y) (x < y ? y : x)
 
 #define DefaultBufferSize 1024
 #define DefaultScaleFactor NULL
@@ -98,19 +103,39 @@ static XtResource resources[] = {
 
 #undef Offset
 
-static void ClassInitialize();
-static void Initialize();
-static void Realize();
-static void Redisplay();
-static void Resize();
-static void Destroy();
-static Boolean SetValues();
+static void ClassInitialize ( void );
+static void GetGC ( ScaleWidget sw );
+static void GetInitialScaleValues ( ScaleWidget sw );
+static void GetRectangleBuffer ( ScaleWidget sw, Cardinal buffer_size );
+static void Initialize ( Widget request, Widget new, ArgList args, 
+			 Cardinal *num_args );
+static void BuildTable ( ScaleWidget sw );
+static void FlushRectangles ( ScaleWidget sw, Drawable drawable, GC gc );
+static void FillRectangle ( ScaleWidget sw, Drawable drawable, GC gc, 
+			    Position x, Position y, 
+			    Dimension width, Dimension height );
+static void ScaleImage ( ScaleWidget sw, Drawable drawable, 
+			 Position img_x, Position img_y, 
+			 Position dst_x, Position dst_y, 
+			 Dimension img_width, Dimension img_height );
+static int FindPixel ( ScaleWidget sw, Position x, Position y, 
+		       Position *img_x, Position *img_y, Pixel *img_pixel );
+static void Redisplay ( Widget w, XEvent *event, Region region );
+static void TryResize ( ScaleWidget sw );
+static void Precision ( ScaleWidget sw );
+static void Proportional ( ScaleWidget sw );
+static void GetScaledSize ( ScaleWidget sw );
+static void GetScaleValues ( ScaleWidget sw );
+static void Unscale ( ScaleWidget sw );
+static void Autoscale ( ScaleWidget sw );
+static void PositionImage ( ScaleWidget sw );
+static void Resize ( Widget w );
+static void Realize ( Widget wid, Mask *vmask, XSetWindowAttributes *attr );
+static void Destroy ( Widget w );
+static Boolean SetValues ( Widget current, Widget request, Widget new, 
+			   ArgList args, Cardinal *num_args );
 
-void SWUnscale();
-void SWAutoscale();
-void SWInitialSize();
-void RequestSelection();
-void GrabSelection();
+
  
 static XtActionsRec actions[] =
 {
@@ -178,14 +203,15 @@ WidgetClass scaleWidgetClass = (WidgetClass) &scaleClassRec;
  */
 
 
-static void ClassInitialize()
+static void 
+ClassInitialize(void)
 {
 } 
 
 
 
-void GetGC(sw)
-    ScaleWidget sw;
+static void 
+GetGC(ScaleWidget sw)
 {
     XGCValues values;
     
@@ -202,10 +228,9 @@ void GetGC(sw)
 
 
 
-void Proportional();
 
-void GetInitialScaleValues(sw)
-    ScaleWidget sw;
+static void 
+GetInitialScaleValues(ScaleWidget sw)
 {
     if (sw->scale.proportional) {
 	sw->scale.scale_x = sw->scale.scale_y =
@@ -221,9 +246,8 @@ void GetInitialScaleValues(sw)
 
 
 
-void GetRectangleBuffer(sw, buffer_size)
-    ScaleWidget sw;
-    Cardinal buffer_size;
+static void 
+GetRectangleBuffer(ScaleWidget sw, Cardinal buffer_size)
     /*
      * This procedure will realloc a new rectangles buffer.
      * If the new buffer size is less than nrectangles, some
@@ -243,10 +267,8 @@ void GetRectangleBuffer(sw, buffer_size)
 
 
 /* ARGSUSED */
-static void Initialize(request, new, args, num_args)
-    Widget request, new;
-    ArgList args;
-    Cardinal *num_args;
+static void 
+Initialize(Widget request, Widget new, ArgList args, Cardinal *num_args)
 {
     ScaleWidget new_sw = (ScaleWidget) new;
     
@@ -315,8 +337,8 @@ static void Initialize(request, new, args, num_args)
 
 
 
-void BuildTable(sw)
-    ScaleWidget sw;
+static void 
+BuildTable(ScaleWidget sw)
     /* 
      * This procedure builds scaling table for image in the scale struct
      * Requires image, scale_x and scale_y to be set properly
@@ -352,10 +374,8 @@ void BuildTable(sw)
 
 
 
-void FlushRectangles(sw, drawable, gc)
-    ScaleWidget sw;
-    Drawable drawable;
-    GC gc;
+static void 
+FlushRectangles(ScaleWidget sw, Drawable drawable, GC gc)
 {
     XFillRectangles(XtDisplay(sw), drawable, gc, 
 		    sw->scale.rectangles, sw->scale.nrectangles);
@@ -365,12 +385,9 @@ void FlushRectangles(sw, drawable, gc)
 
 
 
-void FillRectangle(sw, drawable, gc, x, y, width, height)
-    ScaleWidget sw;
-    Drawable drawable;
-    GC gc;
-    Position x, y;
-    Dimension width, height;
+static void 
+FillRectangle(ScaleWidget sw, Drawable drawable, GC gc, 
+	      Position x, Position y, Dimension width, Dimension height)
 {
     
     if (sw->scale.nrectangles == sw->scale.buffer_size)
@@ -386,12 +403,10 @@ void FillRectangle(sw, drawable, gc, x, y, width, height)
 
 
 
-void ScaleImage(sw, drawable, img_x, img_y, dst_x, dst_y, img_width,img_height)
-    ScaleWidget sw;
-    Drawable drawable;
-    Position img_x, img_y;
-    Position dst_x, dst_y;
-    Dimension img_width, img_height;
+static void 
+ScaleImage(ScaleWidget sw, Drawable drawable, Position img_x, Position img_y, 
+	   Position dst_x, Position dst_y, 
+	   Dimension img_width, Dimension img_height)
     /* 
      * This procedure scales image into the specified drawable
      * It assumes scaling table was already built
@@ -475,11 +490,10 @@ void ScaleImage(sw, drawable, img_x, img_y, dst_x, dst_y, img_width,img_height)
 
 
 
-int FindPixel(sw, x, y, img_x, img_y, img_pixel)
-    ScaleWidget sw;
-    Position x, y; /* (x,y) == (0,0) where image starts in sw window*/
-    Position *img_x, *img_y;
-    Pixel    *img_pixel;
+static int 
+FindPixel(ScaleWidget sw, Position x, Position y, 
+	  Position *img_x, Position *img_y, Pixel *img_pixel)
+          /* (x,y) == (0,0) where image starts in sw window*/
 {
     if (*img_x < 0 || *img_x >= sw->scale.image->width 
 	||
@@ -512,11 +526,9 @@ int FindPixel(sw, x, y, img_x, img_y, img_pixel)
 
 
 
-int SWGetImagePixel(w, x, y, img_x, img_y, img_pixel)
-    Widget w;
-    Position x, y;
-    Position *img_x, *img_y;
-    Pixel    *img_pixel;
+int 
+SWGetImagePixel(Widget w, Position x, Position y, 
+		Position *img_x, Position *img_y, Pixel *img_pixel)
 {
     ScaleWidget sw = (ScaleWidget) w;
     
@@ -532,10 +544,8 @@ int SWGetImagePixel(w, x, y, img_x, img_y, img_pixel)
 
 
 /* ARGSUSED */
-static void Redisplay(w, event, region)
-    Widget w;
-    XEvent *event;
-    Region region;
+static void 
+Redisplay(Widget w, XEvent *event, Region region)
 {
     ScaleWidget sw = (ScaleWidget) w;
     Position  x, y, img_x, img_y;
@@ -586,8 +596,8 @@ static void Redisplay(w, event, region)
 
 
 
-void TryResize(sw)
-    ScaleWidget sw;
+static void 
+TryResize(ScaleWidget sw)
 {
     Dimension width, height;
     XtGeometryResult result;
@@ -611,8 +621,8 @@ void TryResize(sw)
 
 
 
-void Precision(sw)
-    ScaleWidget sw;
+static void 
+Precision(ScaleWidget sw)
 {
     if (sw->scale.scale_x != 1.0)
 	sw->scale.scale_x = floor(sw->scale.scale_x / sw->scale.precision)
@@ -625,8 +635,8 @@ void Precision(sw)
 
 
 
-void Proportional(sw)
-    ScaleWidget sw;
+static void 
+Proportional(ScaleWidget sw)
 {
     float scale_x, scale_y;
 
@@ -662,8 +672,8 @@ void Proportional(sw)
 
 
 
-void GetScaledSize(sw)
-    ScaleWidget sw;
+static void 
+GetScaledSize(ScaleWidget sw)
 {
     sw->scale.width = (Dimension)
 	max(myrint(sw->scale.scale_x * sw->scale.image->width), 1);
@@ -673,8 +683,8 @@ void GetScaledSize(sw)
 
 
 
-void GetScaleValues(sw)
-    ScaleWidget sw;
+static void 
+GetScaleValues(ScaleWidget sw)
 {
     /*
      * Make sure to subtract internal width and height.
@@ -691,8 +701,8 @@ void GetScaleValues(sw)
 
 
 
-void Unscale(sw)
-    ScaleWidget sw;
+static void 
+Unscale(ScaleWidget sw)
 {
     sw->scale.scale_x = sw->scale.scale_y = 1.0;
  
@@ -703,8 +713,8 @@ void Unscale(sw)
 
 
 
-void Autoscale(sw)
-    ScaleWidget sw;
+static void 
+Autoscale(ScaleWidget sw)
 {
     GetScaleValues(sw);
 
@@ -719,8 +729,8 @@ void Autoscale(sw)
 
 
 
-void PositionImage(sw)
-    ScaleWidget sw;
+static void 
+PositionImage(ScaleWidget sw)
 {
     /*
      * Set as if for ForgegGravity (that is center the image)
@@ -744,8 +754,8 @@ void PositionImage(sw)
 
 
 
-static void Resize(w)
-    Widget w;
+static void 
+Resize(Widget w)
 {
     ScaleWidget sw = (ScaleWidget) w;
     
@@ -756,10 +766,8 @@ static void Resize(w)
 
 
 
-static void Realize(wid, vmask, attr)
-        Widget wid;
-        Mask *vmask;
-        XSetWindowAttributes *attr;
+static void 
+Realize(Widget wid, Mask *vmask, XSetWindowAttributes *attr)
 {
   ScaleWidget sw = (ScaleWidget) wid;
   XtCreateWindow(wid, (unsigned int) InputOutput,
@@ -768,8 +776,8 @@ static void Realize(wid, vmask, attr)
  
 
 
-static void Destroy(w)
-    Widget w;
+static void 
+Destroy(Widget w)
 {
     ScaleWidget sw = (ScaleWidget) w; 
 
@@ -788,16 +796,15 @@ static void Destroy(w)
 
 
 /* ARGSUSED */
-static Boolean SetValues(current, request, new, args, num_args)
-    Widget current, request, new;
-    ArgList args;
-    Cardinal *num_args;
+static Boolean 
+SetValues(Widget current, Widget request, Widget new, 
+	  ArgList args, Cardinal *num_args)
 {
     ScaleWidget cur_sw = (ScaleWidget) current;
     /* ScaleWidget req_sw = (ScaleWidget) request; */
     ScaleWidget new_sw = (ScaleWidget) new;
     Boolean redisplay = False;
-    int i;
+    Cardinal i;
     
     for (i = 0; i < *num_args; i++) {
 	if (streq(XtNbackground, args[i].name)) {
@@ -933,11 +940,8 @@ static Boolean SetValues(current, request, new, args, num_args)
 
 
 
-void SWUnscale(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+void 
+SWUnscale(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     ScaleWidget sw = (ScaleWidget) w;
 
@@ -948,11 +952,8 @@ void SWUnscale(w, event, params, num_params)
 
 
 
-void SWAutoscale(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+void 
+SWAutoscale(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     ScaleWidget sw = (ScaleWidget) w;
 
@@ -963,11 +964,8 @@ void SWAutoscale(w, event, params, num_params)
 
 
 
-void SWInitialSize(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+void 
+SWInitialSize(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     ScaleWidget sw = (ScaleWidget) w;
     
@@ -985,9 +983,8 @@ void SWInitialSize(w, event, params, num_params)
 
 
 
-void SWSetImage(w, image)
-    Widget w;
-    XImage *image;
+void 
+SWSetImage(Widget w, XImage *image)
 {
     int n;
     Arg wargs[2];
@@ -999,34 +996,25 @@ void SWSetImage(w, image)
 
 
 
-extern void SWRequestSelection();
 
-void RequestSelection(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+void 
+RequestSelection(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     SWRequestSelection(w, event->xbutton.time);
 }
 
 
 
-extern void SWGrabSelection();
-
-void GrabSelection(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+void 
+GrabSelection(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     SWGrabSelection(w, event->xbutton.time);
 }
 
 
 
-Pixmap SWGetPixmap(w)
-    Widget w;
+Pixmap 
+SWGetPixmap(Widget w)
 {
     ScaleWidget sw = (ScaleWidget) w;
     Pixmap pixmap;
