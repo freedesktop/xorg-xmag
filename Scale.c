@@ -26,7 +26,7 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
-/* $XFree86: xc/programs/xmag/Scale.c,v 3.9 2001/12/14 20:02:11 dawes Exp $ */
+/* $XFree86$ */
 
 /*
  * Author:  Davor Matic, MIT X Consortium
