@@ -26,7 +26,11 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
+/* $XFree86: xc/programs/xmag/xmag.c,v 1.11 2003/01/19 04:44:45 paulo Exp $ */
 
+
+#include <stdlib.h>		/* for exit() and abs() */
+#include <stdio.h>
 
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
@@ -34,25 +38,18 @@ from The Open Group.
 #include <X11/Xaw/Command.h>
 #include <X11/Xaw/Label.h>
 #include <X11/Shell.h>
+#include <X11/cursorfont.h>
+#include <X11/Xmu/Error.h>
 #include "RootWin.h"
 #include "Scale.h"
-#include <X11/cursorfont.h>
-
-#include <stdio.h>
-#include <X11/Xmu/Error.h>
-
-#ifndef X_NOT_STDC_ENV
-#include <stdlib.h>		/* for exit() and abs() */
-#endif
+#include "CutPaste.h"
 
 #define SRCWIDTH  64
 #define SRCHEIGHT 64
 
-#define min(a, b) a < b ? a : b
-
-extern void SWGrabSelection();
-extern void SWRequestSelection();
-extern int  SWGetImagePixel();
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 
 
@@ -93,6 +90,40 @@ static unsigned int srcWidth, srcHeight;
 
 /* forward declarations */
 
+#if NeedFunctionPrototypes
+/* xmag.c */
+static int Error(Display *, XErrorEvent *);
+static void CloseAP(Widget, XEvent *, String *, Cardinal *);
+static void SetCmapPropsAP(Widget, XEvent *, String *, Cardinal *);
+static void UnsetCmapPropsAP(Widget, XEvent *, String *, Cardinal *);
+static void NewAP(Widget, XEvent *, String *, Cardinal *);
+static void ReplaceAP(Widget, XEvent *, String *, Cardinal *);
+static void PopupPixelAP(Widget, XEvent *, String *, Cardinal *);
+static void UpdatePixelAP(Widget, XEvent *, String *, Cardinal *);
+static void PopdownPixelAP(Widget, XEvent *, String *, Cardinal *);
+static void SelectRegionAP(Widget, XEvent *, String *, Cardinal *);
+static void CheckPoints(Position *, Position *, Position *, Position *);
+static void HighlightTO(XtPointer, XtIntervalId *);
+static void CloseCB(Widget, XtPointer, XtPointer);
+static void ReplaceCB(Widget, XtPointer, XtPointer);
+static void NewCB(Widget, XtPointer, XtPointer);
+static void SelectCB(Widget, XtPointer, XtPointer);
+static void PasteCB(Widget, XtPointer, XtPointer);
+static void SetupGC(void);
+static Window FindWindow(int, int);
+static void ResizeEH(Widget, XtPointer, XEvent *, Boolean *);
+static void DragEH(Widget, XtPointer, XEvent *, Boolean *);
+static void StartRootPtrGrab(int, hlPtr);
+static void CreateRoot(void);
+static void GetImageAndAttributes(Window, int, int, int, int, hlPtr);
+static int Get_XColors(XWindowAttributes *, XColor **);
+static Pixel GetMaxIntensity(hlPtr);
+static Pixel GetMinIntensity(hlPtr);
+static void PopupNewScale(hlPtr);
+static void RedoOldScale(hlPtr);
+static void InitCursors(void);
+static void ParseSourceGeom(void);
+#else
 static void 
   CloseAP(), 
   SetCmapPropsAP(),
@@ -130,6 +161,7 @@ static int
 static Pixel
   GetMaxIntensity(),
   GetMinIntensity();
+#endif
 
 
 
@@ -185,8 +217,7 @@ static XtActionsRec actions_table[] = {
  *            area that contains bits of different depths.
  */
 static int 
-Error(dpy, err)
-     Display *dpy; XErrorEvent *err;
+Error(Display *dpy, XErrorEvent *err)
 {
   (void) XmuPrintDefaultErrorMessage (dpy, err, stderr);
   return 0;
@@ -198,11 +229,7 @@ Error(dpy, err)
  *          
  */
 static void			/* ARGSUSED */
-CloseAP(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+CloseAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   Arg wargs[2]; int n; hlPtr data;
   if (!--numXmags) exit(0);
@@ -223,11 +250,7 @@ CloseAP(w, event, params, num_params)
  *                     
  */
 static void			/* ARGSUSED */
-SetCmapPropsAP(w, event, params, num_params)
-     Widget w;
-     XEvent *event;
-     String *params;
-     Cardinal *num_params;
+SetCmapPropsAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   Arg wargs[2]; int n; hlPtr data;
   n = 0;			/* get user data */
@@ -247,11 +270,7 @@ SetCmapPropsAP(w, event, params, num_params)
  *                     
  */
 static void			/* ARGSUSED */
-UnsetCmapPropsAP(w, event, params, num_params)
-     Widget w;
-     XEvent *event;
-     String *params;
-     Cardinal *num_params;
+UnsetCmapPropsAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   Arg wargs[2]; int n; hlPtr data;
   n = 0;			/* get user data */
@@ -271,11 +290,7 @@ UnsetCmapPropsAP(w, event, params, num_params)
  *                                              FIND A BETTER WAY....
  */
 static void			/* ARGSUSED */
-NewAP(w, event, params, num_params)
-     Widget w;
-     XEvent *event;
-     String *params;
-     Cardinal *num_params;
+NewAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   StartRootPtrGrab(True, NULL);
 }
@@ -286,11 +301,7 @@ NewAP(w, event, params, num_params)
  * ReplaceAP() -- Replace this particular xmag dialog.
  */
 static void                     /* ARGSUSED */
-ReplaceAP(w, event, params, num_params)
-     Widget w;
-     XEvent *event;
-     String *params;
-     Cardinal *num_params;
+ReplaceAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   Arg wargs[2]; int n; hlPtr data;
   n = 0;			/* get user data */
@@ -305,11 +316,7 @@ ReplaceAP(w, event, params, num_params)
  * PopupPixelAP() -- Show pixel information.
  */
 static void			/* ARGSUSED */
-PopupPixelAP(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+PopupPixelAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     Position scale_x, scale_y;
     Dimension scale_height;
@@ -348,7 +355,7 @@ PopupPixelAP(w, event, params, num_params)
     XtSetArg(wargs[n], XtNy, label_y); n++;
     XtSetValues(data->pixShell, wargs, n);
     
-    UpdatePixelAP(w, event);
+    UpdatePixelAP(w, event, 0, 0);
 }
 
 
@@ -357,11 +364,7 @@ PopupPixelAP(w, event, params, num_params)
  * UpdatePixelAP() -- Update pixel information.
  */
 static void			/* ARGSUSED */
-UpdatePixelAP(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+UpdatePixelAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
     Position x, y;
     Pixel pixel;
@@ -380,7 +383,7 @@ UpdatePixelAP(w, event, params, num_params)
     else {
 	color.pixel = pixel;
 	XQueryColor(dpy, data->win_info.colormap, &color);
-	sprintf(string, "Pixel %d at (%d,%d) colored (%x,%x,%x).", 
+	sprintf(string, "Pixel %ld at (%d,%d) colored (%x,%x,%x).", 
 		pixel, x + data->x, y + data->y,
 		color.red, color.green, color.blue);
 	n = 0;
@@ -396,30 +399,24 @@ UpdatePixelAP(w, event, params, num_params)
  * PopdownPixelAP() -- Remove pixel info.
  */
 static void			/* ARGSUSED */
-PopdownPixelAP(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+PopdownPixelAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {
   int n;
   Arg wargs[3];
-  hlPtr data;
+  hlPtr data = NULL;
   
   n = 0;
   XtSetArg(wargs[0], XtNuserData, &data); n++;
   XtGetValues(w, wargs, n);
-  XtPopdown(data->pixShell);
+
+  if (data)
+    XtPopdown(data->pixShell);
 }
 
 
 
 static void			/* ARGSUSED */
-SelectRegionAP(w, event, params, num_params)
-    Widget w;
-    XEvent *event;
-    String *params;
-    Cardinal *num_params;
+SelectRegionAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
 {    
 /***** NOT SURE WHAT TO DO WITH THIS 
     if (app_resources.unmap)
@@ -445,8 +442,7 @@ SelectRegionAP(w, event, params, num_params)
  *
  */
 static void 
-CheckPoints(x1, x2, y1, y2)
-     Position *x1, *x2, *y1, *y2; /* Coordinates */
+CheckPoints(Position *x1, Position *x2, Position *y1, Position *y2)
 {
   Position tmp; 
   Boolean above, left;
@@ -469,8 +465,7 @@ CheckPoints(x1, x2, y1, y2)
  * HighlightTO() -- Timer to highlight the selection box
  */
 static void
-HighlightTO(closure, id)	/* ARGSUSED */
-     XtPointer closure; XtIntervalId *id;
+HighlightTO(XtPointer closure, XtIntervalId *id)	/* ARGSUSED */
 {
   hlPtr data = (hlPtr)closure;
   XGrabServer(dpy);
@@ -503,8 +498,7 @@ HighlightTO(closure, id)	/* ARGSUSED */
  *             then exit.
  */
 static void			/* ARGSUSED */
-CloseCB(w, clientData, callData)
-     Widget w; XtPointer clientData, callData;
+CloseCB(Widget w, XtPointer clientData, XtPointer callData)
 {
   Widget shell = (Widget)clientData;
   if (!--numXmags) exit(0);
@@ -518,8 +512,7 @@ CloseCB(w, clientData, callData)
  * ReplaceCB() -- Replace this particular xmag dialog.
  */
 static void                     /* ARGSUSED */
-ReplaceCB(w, clientData, callData)
-     Widget w; XtPointer clientData, callData;
+ReplaceCB(Widget w, XtPointer clientData, XtPointer callData)
 {
   hlPtr data = (hlPtr)clientData;
   StartRootPtrGrab(False, data);
@@ -531,8 +524,7 @@ ReplaceCB(w, clientData, callData)
  * NewCB() -- Create an additional xmag dialog.
  */
 static void			/* ARGSUSED */
-NewCB(w, clientData, callData)
-     Widget w; XtPointer clientData, callData;
+NewCB(Widget w, XtPointer clientData, XtPointer callData)
 {
   StartRootPtrGrab(True, NULL);
 }
@@ -543,8 +535,7 @@ NewCB(w, clientData, callData)
  * SelectCB() -- Own the primary selection.
  */
 static void			/* ARGSUSED */
-SelectCB(w, clientData, callData)
-     Widget w; XtPointer clientData, callData;
+SelectCB(Widget w, XtPointer clientData, XtPointer callData)
 {
   hlPtr data = (hlPtr)clientData;
   SWGrabSelection(data->scaleInstance, XtLastTimestampProcessed(dpy));
@@ -556,8 +547,7 @@ SelectCB(w, clientData, callData)
  * PasteCB() -- Paste from the primary selectin into xmag.
  */
 static void			/* ARGSUSED */
-PasteCB(w, clientData, callData)
-     Widget w; XtPointer clientData, callData;
+PasteCB(Widget w, XtPointer clientData, XtPointer callData)
 {
   hlPtr data = (hlPtr)clientData;
   SWRequestSelection(data->scaleInstance, XtLastTimestampProcessed(dpy));
@@ -569,7 +559,7 @@ PasteCB(w, clientData, callData)
  * SetupGC() -- Graphics context for magnification selection.
  */
 static void 
-SetupGC()
+SetupGC(void)
 {
     selectGCV.function = GXxor;
     selectGCV.foreground = 1L;
@@ -585,8 +575,7 @@ SetupGC()
  *
  */
 static Window 
-FindWindow(x, y)
-     int x, y;			/* Locatation of cursor */
+FindWindow(int x, int y)	/* Locatation of cursor */
 {
   XWindowAttributes wa;
   Window findW = DefaultRootWindow(dpy), stopW, childW;
@@ -611,8 +600,8 @@ FindWindow(x, y)
  * ResizeEH() -- Event Handler for resize of selection box.
  */
 static void 
-ResizeEH(w, closure, event, continue_to_dispatch)	/* ARGSUSED */
-     Widget w; XtPointer closure; XEvent *event; Boolean *continue_to_dispatch;
+ResizeEH(Widget w, XtPointer closure, XEvent *event, 
+	 Boolean *continue_to_dispatch)	/* ARGSUSED */
 {
   hlPtr data = (hlPtr)closure;
   switch (event->type) {
@@ -650,8 +639,8 @@ ResizeEH(w, closure, event, continue_to_dispatch)	/* ARGSUSED */
  * DragEH() -- Event Handler for draging selection box.
  */
 static void 
-DragEH(w, closure, event, continue_to_dispatch) /* ARGSUSED */
-     Widget w; XtPointer closure; XEvent *event; Boolean *continue_to_dispatch;
+DragEH(Widget w, XtPointer closure, XEvent *event, 
+       Boolean *continue_to_dispatch) /* ARGSUSED */
 {
   hlPtr data = (hlPtr)closure;
   switch (event->type) {
@@ -712,9 +701,8 @@ DragEH(w, closure, event, continue_to_dispatch) /* ARGSUSED */
  *              
  */
 static void
-StartRootPtrGrab(new, data)
-     Boolean new;		/* do we cretate a new scale instance? */
-     hlPtr data;		/* highligh data */
+StartRootPtrGrab(int new, 	/* do we cretate a new scale instance? */
+		 hlPtr data)	/* highligh data */
 {
   Window    rootR, childR;
   int       rootX, rootY, winX, winY;
@@ -752,7 +740,7 @@ StartRootPtrGrab(new, data)
  *                 image.
  */
 static void
-CreateRoot()
+CreateRoot(void)
 {
   hlPtr data;
   root = XtCreateWidget("root", rootWindowWidgetClass, toplevel, NULL, 0);
@@ -782,8 +770,8 @@ CreateRoot()
  *               visual to be used for the magnification image.  
  */
 static void 
-GetImageAndAttributes(w, x, y, width, height, data)
-     Window w; int x, y, width, height; hlPtr data;
+GetImageAndAttributes(Window w, int x, int y, int width, int height, 
+		      hlPtr data)
 {
   /* get parameters of window being magnified */
   XGetWindowAttributes(dpy, w, &data->win_info);
@@ -830,9 +818,7 @@ GetImageAndAttributes(w, x, y, width, height, data)
  */
 #define lowbit(x) ((x) & (~(x) + 1))
 static int 
-Get_XColors(win_info, colors)
-     XWindowAttributes *win_info;
-     XColor **colors;
+Get_XColors(XWindowAttributes *win_info, XColor **colors)
 {
     int i, ncolors;
  
@@ -884,8 +870,7 @@ Get_XColors(win_info, colors)
  * GetMaxIntensity() -- Find the maximum intensity pixel value for a colormap.
  */
 static Pixel
-GetMaxIntensity(data)
-     hlPtr data;
+GetMaxIntensity(hlPtr data)
 {
   XColor *colors = NULL, *mptr, *tptr;
   int i, ncolors;
@@ -906,8 +891,7 @@ GetMaxIntensity(data)
  * GetMinIntensity() -- Find the minimum intensity pixel value for a colormap.
  */
 static Pixel
-GetMinIntensity(data)
-     hlPtr data;
+GetMinIntensity(hlPtr data)
 {
   XColor *colors = NULL, *mptr, *tptr;
   int i, ncolors;
@@ -933,8 +917,7 @@ static Widget pane1, pane2, pane3, cclose, replace, new, select_w, paste, label;
  * PopupNewScale() -- Create and popup a new scale composite.
  */
 static void		
-PopupNewScale(data)
-     hlPtr data;
+PopupNewScale(hlPtr data)
 {
   Arg warg;
 
@@ -1018,8 +1001,7 @@ PopupNewScale(data)
  *                   widget.
  */
 static void
-RedoOldScale(data)
-     hlPtr data;
+RedoOldScale(hlPtr data)
 {
   Arg wargs[3];
   int n;
@@ -1060,7 +1042,7 @@ RedoOldScale(data)
  * InitCursors() -- Create our cursors for area selection.
  */
 static void
-InitCursors()
+InitCursors(void)
 {
   ulAngle = XCreateFontCursor(dpy, XC_ul_angle);
   urAngle = XCreateFontCursor(dpy, XC_ur_angle);
@@ -1074,7 +1056,7 @@ InitCursors()
  * ParseSourceGeom() -- Determin dimensions of area to magnify from resources.
  */
 static void 
-ParseSourceGeom()
+ParseSourceGeom(void)
 {
 				/* source */
   srcStat = 
@@ -1091,9 +1073,8 @@ ParseSourceGeom()
 /*
  * Main program.
  */
-void main(argc, argv)
-     int argc;
-     char **argv;
+int 
+main(int argc, char *argv[])
 {
   XSetErrorHandler(Error);
     
@@ -1122,4 +1103,5 @@ void main(argc, argv)
     StartRootPtrGrab(True, (hlPtr)NULL);
   wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
   XtAppMainLoop(app);
+  exit(0);
 }

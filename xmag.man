@@ -22,7 +22,10 @@
 .\" not be used in advertising or otherwise to promote the sale, use or
 .\" other dealings in this Software without prior written authorization
 .\" from The Open Group.
-.TH XMAG 1 "Release 6.4" "X Version 11"
+.\"
+.\" $XFree86: xc/programs/xmag/xmag.man,v 1.7 2001/12/14 20:02:12 dawes Exp $
+.\"
+.TH XMAG 1 __xorgversion__
 .SH NAME
 xmag \- magnify parts of the screen
 .SH SYNOPSIS
