@@ -54,7 +54,7 @@ from The Open Group.
 
 
 /* highlight interval */
-#define HLINTERVAL  10		
+#define HLINTERVAL  0.5		
 
 /* highlight mode */
 typedef enum { drag, resize, done } hlMode; 
@@ -517,7 +517,7 @@ static void
 SetupGC(void)
 {
     selectGCV.function = GXxor;
-    selectGCV.foreground = 1L;
+    selectGCV.foreground = 0xffffffff;
     selectGCV.subwindow_mode = IncludeInferiors;
     selectGC = XtGetGC(toplevel, GCFunction|GCForeground|GCSubwindowMode,
 		       &selectGCV);
