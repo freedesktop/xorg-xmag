@@ -26,7 +26,7 @@ other dealings in this Software without prior written authorization
 from The Open Group.
 
 */
-/* $XFree86$ */
+/* $XFree86: xc/programs/xmag/xmag.c,v 1.14 2003/09/21 13:05:51 herrb Exp $ */
 
 
 #include <stdlib.h>		/* for exit() and abs() */
