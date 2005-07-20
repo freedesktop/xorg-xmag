@@ -21,8 +21,8 @@
 
 bin_PROGRAMS = xmag
 
-xmag_CFLAGS = $(DEP_CFLAGS)
-xmag_LDADD = $(DEP_LIBS) -lm
+xmag_CFLAGS = $(XMAG_CFLAGS)
+xmag_LDADD = $(XMAG_LIBS) -lm
 
 xmag_SOURCES =	\
         CutPaste.c \
