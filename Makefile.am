@@ -35,7 +35,7 @@ xmag_SOURCES =	\
         ScaleP.h \
         xmag.c
 
-dist_man_MANS = \
+dist_man1_MANS = \
         xmag.man
 
 # App default files  (*.ad)
