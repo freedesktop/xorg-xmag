@@ -58,7 +58,6 @@ EXTRA_DIST = $(APPDEFAULTFILES:%=%.ad)
 CLEANFILES = $(APPDEFAULTFILES)
 
 # Developer documentation for Scale widget in Scale.c
-
 EXTRA_DIST += Scale.txt
 
-
+EXTRA_DIST += xmag.icon
