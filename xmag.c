@@ -50,11 +50,19 @@ from The Open Group.
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
+#include <poll.h>
 
 
 
-/* highlight interval */
-#define HLINTERVAL  0.5		
+/* highlight interval (in milliseconds) */
+#define HLINTERVAL  100
+
+/* sleep between draw & erase of highlight
+ * 20 milliseconds - enough for screen refresh - not too long to annoy users
+ *  since we hold a server grab during this time
+ */
+#define HLSLEEP	    poll(NULL, 0, 20)
+   
 
 /* highlight mode */
 typedef enum { drag, resize, done } hlMode; 
@@ -427,6 +435,8 @@ HighlightTO(XtPointer closure, XtIntervalId *id)	/* ARGSUSED */
   if (data->selectMode == drag) {
     XDrawRectangle(dpy, DefaultRootWindow(dpy), data->gc, 
 		   data->x, data->y, data->width, data->height);
+    XFlush(dpy);
+    HLSLEEP;
     XDrawRectangle(dpy, DefaultRootWindow(dpy), data->gc, 
 		   data->x, data->y, data->width, data->height);
   }
@@ -438,6 +448,8 @@ HighlightTO(XtPointer closure, XtIntervalId *id)	/* ARGSUSED */
     CheckPoints(&x1, &x2, &y1, &y2);
     XDrawRectangle(dpy, DefaultRootWindow(dpy), data->gc, 
 		   x1, y1, x2 - x1, y2 - y1);
+    XFlush(dpy);
+    HLSLEEP;
     XDrawRectangle(dpy, DefaultRootWindow(dpy), data->gc, 
 		   x1, y1, x2 - x1, y2 - y1);
   }
