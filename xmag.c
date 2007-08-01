@@ -28,6 +28,7 @@ from The Open Group.
 */
 /* $XFree86: xmag.c,v 1.13 2003/05/27 22:27:07 tsi Exp $ */
 
+#include "config.h"
 
 #include <stdlib.h>		/* for exit() and abs() */
 #include <stdio.h>
@@ -50,7 +51,6 @@ from The Open Group.
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
-#include <poll.h>
 
 
 
@@ -61,8 +61,26 @@ from The Open Group.
  * 20 milliseconds - enough for screen refresh - not too long to annoy users
  *  since we hold a server grab during this time
  */
-#define HLSLEEP	    poll(NULL, 0, 20)
-   
+#define HLSLEEPINTERVAL 20 /* milliseconds */
+
+#ifdef HAVE_NANOSLEEP
+#include <time.h>
+#define HLSLEEP	    do { \
+	struct timespec sleeptime = { 0 , HLSLEEPINTERVAL * 1000000 } ;	\
+	nanosleep(&sleeptime, NULL); \
+    } while(0)
+#elif defined(HAVE_POLL)
+#include <poll.h>
+#define HLSLEEP	    poll(NULL, 0, HLSLEEPINTERVAL)
+#elif defined(HAVE_SELECT)
+#include <X11/Xpoll.h>
+#define HLSLEEP	    do { \
+	struct timeval sleeptime = { 0 , HLSLEEPINTERVAL * 1000 } ;	\
+	select(0, NULL, NULL, NULL, &sleeptime); \
+    } while(0)
+#else
+#define HLSLEEP	XSync(dpy, False)
+#endif
 
 /* highlight mode */
 typedef enum { drag, resize, done } hlMode; 

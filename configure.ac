@@ -31,6 +31,8 @@ AM_CONFIG_HEADER(config.h)
 AC_PROG_CC
 AC_PROG_INSTALL
 
+AC_CHECK_FUNCS([nanosleep poll select])
+
 # Checks for pkg-config packages
 XAW_CHECK_XPRINT_SUPPORT(XMAG)
 AC_SUBST(XMAG_CFLAGS)
