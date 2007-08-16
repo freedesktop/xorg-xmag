@@ -21,7 +21,7 @@
 
 bin_PROGRAMS = xmag
 
-xmag_CFLAGS = $(XMAG_CFLAGS)
+AM_CFLAGS = $(XMAG_CFLAGS)
 xmag_LDADD = $(XMAG_LIBS) -lm
 
 xmag_SOURCES =	\
