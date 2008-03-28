@@ -44,7 +44,7 @@ appdefaultdir = @appdefaultdir@
 
 
 APPDEFAULTFILES = \
-        Xmag
+        app-defaults/Xmag
 
 SUFFIXES = .ad
 
