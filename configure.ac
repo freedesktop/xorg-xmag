@@ -34,7 +34,7 @@ AC_PROG_INSTALL
 AC_CHECK_FUNCS([nanosleep poll select])
 
 # Checks for pkg-config packages
-XAW_CHECK_XPRINT_SUPPORT(XMAG)
+PKG_CHECK_MODULES(XMAG, xaw7)
 AC_SUBST(XMAG_CFLAGS)
 AC_SUBST(XMAG_LIBS)
 
