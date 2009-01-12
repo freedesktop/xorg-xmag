@@ -19,3 +19,7 @@ stamp-h1
 xmag
 xmag.1
 *~
+*.o
+xmag-*.tar.*
+ChangeLog
+tags

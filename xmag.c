@@ -339,8 +339,8 @@ PopupPixelAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
     XtSetArg(wargs[n], XtNx, label_x); n++;
     XtSetArg(wargs[n], XtNy, label_y); n++;
     XtSetValues(data->pixShell, wargs, n);
-    
-    UpdatePixelAP(w, event, 0, 0);
+
+    UpdatePixelAP(w, event, NULL, NULL);
 }
 
 
