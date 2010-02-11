@@ -42,7 +42,6 @@ AC_CHECK_FUNCS([nanosleep poll select])
 
 # Checks for pkg-config packages
 PKG_CHECK_MODULES(XMAG, xaw7)
-XMAG_CFLAGS="$CWARNFLAGS $XMAG_CFLAGS"
 AC_SUBST(XMAG_CFLAGS)
 AC_SUBST(XMAG_LIBS)
 
