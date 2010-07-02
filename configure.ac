@@ -41,9 +41,7 @@ AC_PROG_INSTALL
 AC_CHECK_FUNCS([nanosleep poll select])
 
 # Checks for pkg-config packages
-PKG_CHECK_MODULES(XMAG, xaw7)
-AC_SUBST(XMAG_CFLAGS)
-AC_SUBST(XMAG_LIBS)
+PKG_CHECK_MODULES(XMAG, xaw7 xmu xt x11)
 
 PKG_CHECK_MODULES(APPDEFS, xt)
 xt_appdefaultdir=`$PKG_CONFIG --variable=appdefaultdir xt`
