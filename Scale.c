@@ -34,9 +34,6 @@ from The Open Group.
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
-#if defined(ISC) && __STDC__ && !defined(ISC30)
-extern double atof(char *);
-#endif
 
 #include <X11/IntrinsicP.h>
 #include <X11/StringDefs.h>
@@ -54,9 +51,6 @@ extern double atof(char *);
 #endif
 #ifndef max
 #define max(x, y) ((x) < (y) ? (y) : (x))
-#endif
-#if defined(ISC) && __STDC__ && !defined(ISC30)
-extern double atof(char *);
 #endif
 
 #define DefaultBufferSize 1024
