@@ -23,7 +23,7 @@ SUBDIRS = man
 bin_PROGRAMS = xmag
 
 AM_CFLAGS = $(XMAG_CFLAGS) $(CWARNFLAGS)
-xmag_LDADD = $(XMAG_LIBS) -lm
+xmag_LDADD = $(XMAG_LIBS)
 
 xmag_SOURCES =	\
         CutPaste.c \
