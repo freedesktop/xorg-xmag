@@ -366,9 +366,10 @@ UpdatePixelAP(Widget w, XEvent *event, String *params, Cardinal *num_params)
     else {
 	color.pixel = pixel;
 	XQueryColor(dpy, data->win_info.colormap, &color);
-	sprintf(string, "Pixel %ld at (%d,%d) colored (%x,%x,%x).", 
-		pixel, x + data->x, y + data->y,
-		color.red, color.green, color.blue);
+	snprintf(string, sizeof(string),
+		 "Pixel %ld at (%d,%d) colored (%x,%x,%x).",
+		 pixel, x + data->x, y + data->y,
+		 color.red, color.green, color.blue);
 	n = 0;
 	XtSetArg(wargs[n], XtNlabel, string); n++;    
 	XtSetValues(data->pixLabel, wargs, n);
