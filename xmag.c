@@ -196,7 +196,7 @@ static XtActionsRec actions_table[] = {
 
 
 /*
- * Error() -- Error handler:  Catch a bad match in magnifing an
+ * Error() -- Error handler:  Catch a bad match in magnifying an
  *            area that contains bits of different depths.
  */
 static int 
@@ -558,11 +558,11 @@ SetupGC(void)
 
 
 /*
- * FindWindow() -- Determin window the pointer is over.
+ * FindWindow() -- Determine window the pointer is over.
  *
  */
 static Window 
-FindWindow(int x, int y)	/* Locatation of cursor */
+FindWindow(int x, int y)	/* Location of cursor */
 {
   XWindowAttributes wa;
   Window findW = DefaultRootWindow(dpy), stopW, childW;
@@ -628,7 +628,7 @@ ResizeEH(Widget w, XtPointer closure, XEvent *event,
 
 
 /*
- * DragEH() -- Event Handler for draging selection box.
+ * DragEH() -- Event Handler for dragging selection box.
  */
 static void 
 DragEH(Widget w, XtPointer closure, XEvent *event, 
@@ -693,8 +693,8 @@ DragEH(Widget w, XtPointer closure, XEvent *event,
  *              
  */
 static void
-StartRootPtrGrab(int new, 	/* do we cretate a new scale instance? */
-		 hlPtr data)	/* highligh data */
+StartRootPtrGrab(int new, 	/* do we create a new scale instance? */
+		 hlPtr data)	/* highlight data */
 {
   Window    rootR, childR;
   int       rootX, rootY, winX, winY;
@@ -728,7 +728,7 @@ StartRootPtrGrab(int new, 	/* do we cretate a new scale instance? */
 
 /*
  * CreateRoot() -- Create a root window widget. If the user specified x and y
- *                 in his source geometry then use this to directly get the
+ *                 in the source geometry then use this to directly get the
  *                 image.
  */
 static void
@@ -758,7 +758,7 @@ CreateRoot(void)
 
 /* 
  * GetImageAndAttributes() -- Get the image bits from the screen.
- *               We will also determin here the colormap, depth, and
+ *               We will also determine here the colormap, depth, and
  *               visual to be used for the magnification image.  
  */
 static void 
@@ -1085,7 +1085,7 @@ InitCursors(void)
 
 
 /*
- * ParseSourceGeom() -- Determin dimensions of area to magnify from resources.
+ * ParseSourceGeom() -- Determine dimensions of area to magnify from resources.
  */
 static void 
 ParseSourceGeom(void)
